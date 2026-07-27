@@ -1,3 +1,5 @@
+import os
+import uvicorn
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from transformers import pipeline
@@ -31,3 +33,9 @@ def predict_sentiment(payload: TextRequest):
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Inference error: {str(e)}")
+
+# 👇 Entry point for Render / local execution
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 8000))
+    # Note: reload=False is recommended here so Transformer models aren't loaded twice in memory
+    uvicorn.run("app:app", host="0.0.0.0", port=port)
