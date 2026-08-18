@@ -1,15 +1,31 @@
 import os
 import uvicorn
+import mlflow.transformers
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from transformers import pipeline
 
 app = FastAPI(title="Kubernetes NLP Sentiment Microservice")
 
+# --- MLflow Model Registry Logic for Transformers ---
+MODEL_URI = "models:/DistilBERTSentimentModel/Production"
+TRACKING_URI = "file:./mlruns"
+
+def load_sentiment_model():
+    """Attempts to load from MLflow registry, falls back to raw pipeline."""
+    try:
+        mlflow.set_tracking_uri(TRACKING_URI)
+        print(f"Attempting to load model from MLflow: {MODEL_URI}")
+        return mlflow.transformers.load_model(MODEL_URI)
+    except Exception as e:
+        print(f"Registry load failed, falling back to local pipeline: {e}")
+        print("Loading Transformer Model locally...")
+        return pipeline("sentiment-analysis", model="distilbert-base-uncased-finetuned-sst-2-english")
+
 # Load Hugging Face DistilBERT Pipeline at startup
-print("Loading Transformer Model...")
-sentiment_model = pipeline("sentiment-analysis", model="distilbert-base-uncased-finetuned-sst-2-english")
-print("Model Loaded Successfully!")
+print("Initializing Sentiment Model...")
+sentiment_model = load_sentiment_model()
+print("Model Initialized Successfully!")
 
 class TextRequest(BaseModel):
     text: str = Field(..., min_length=2, max_length=500, example="Kubernetes and FastAPI make MLOps smooth!")
